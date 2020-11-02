@@ -1,0 +1,70 @@
+//  in case you would like to try the code out, maybe you have a better luck. 
+
+// Paste into your VS code, save as GO file.
+
+// Link to the Youtube video https://www.youtube.com/watch?v=4VSno5bK9Uk&ab_channel=DivRhino
+
+package main
+
+import (
+	"fmt"
+	"log"
+	"strconv"
+	"github.com/gocolly/colly"
+	"encoding/json"
+	//"os"
+	"io/ioutil" // to be able to write to a file
+)
+type Fact struct {
+	ID          int    `json:"id"`
+	Description string `json:"description"`
+}
+
+func main() {
+	allFacts := make([]Fact, 0)
+
+	collector := colly.NewCollector(
+		colly.AllowedDomains("factretriever.com", "www.factretreiver.com"),
+	)
+
+
+	collector.OnHTML(".factsList li", func(element *colly.HTMLElement){
+		factid, err := strconv.Atoi(element.Attr("id"))
+		if err != nil {
+			log.Println("Could not get id")
+		}
+
+		factDesc := element.Text
+
+		fact := Fact{
+			ID: factid,
+			Description: factDesc,
+		}
+
+		allFacts = append(allFacts, fact)
+		
+	})
+
+	collector.OnRequest(func(request *colly.Request) {
+		fmt.Println("Visiting", request.URL.String())
+	})
+
+	collector.Visit("https://www.factretriever.com/rhino-facts")
+
+	/*
+	enc := json.NewEncoder(os.Stdout)   
+	enc.SetIndent("", " ")
+	enc.Encode(allFacts) // Replacing this section with "writeJSON(allFacts)"  To write to the JSON file instead of the Terminal.   
+	*/
+	writeJSON(allFacts)
+}
+
+func writeJSON(data []Fact) {
+	file, err := json.MarshalIndent(data, "", " ")
+	if err != nil {
+		log.Println("Unable to create JSON file")
+		return 
+	}
+
+	_= ioutil.WriteFile("rhinofacts.json", file, 0644) // 0644 is a type of file format. "http://permissions-calculator.org/decode/0644/"
+}
